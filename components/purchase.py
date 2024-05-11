@@ -9,16 +9,13 @@ PURCHASES_COLLECTION = "purchases"
 
 def get_database():
     client = MongoClient(MONGODB_URI)
-    return client[DATABASE_NAME]
+    yield client[DATABASE_NAME]
 
 
-def get_products_collection():
-    """Gets or creates the 'products' collection."""
+def get_purchases_collection():
+    """Gets or creates the 'purchases' collection."""
     db = get_database()
-    return db[PRODUCTS_COLLECTION]
+    return db[PURCHASES_COLLECTION]
 
 
-
-
-# Example usage
-products_collection = get_products_collection()
+purchases_collection = get_purchases_collection()

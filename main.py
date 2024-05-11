@@ -23,11 +23,34 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development; adjust for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+products_db = {
+    1: {
+        "id": 1,
+        "name": "TechPro Ultrabook",
+        "description": "Powerful and sleek ultrabook for professionals.",
+        "price": 1299.99
+    },
+    2: {
+        "id": 2,
+        "name": "SmartHome Hub",
+        "description": "Control your home devices with ease.",
+        "price": 79.95
+    }
+}
+
+purchases_db = {
+    1: {
+        "user_id": "tim",  # Assuming "tim" is the username
+        "product_id": 1,
+        "purchase_date": "2024-05-10T15:32:05Z"  # ISO 8601 format
+    },
+}
 
 
 class Token(BaseModel):
@@ -44,6 +67,19 @@ class User(BaseModel):
     email: str or None = None
     full_name: str or None = None
     disabled: bool or None = None
+
+
+class Product(BaseModel):
+    id: int
+    name: str
+    description: str
+    price: float
+
+
+class Purchase(BaseModel):
+    user_id: int
+    product_id: int
+    purchase_date: datetime = datetime.utcnow()
 
 
 class UserInDB(User):
@@ -140,3 +176,101 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 @app.get("/users/me/items")
 async def read_own_items(current_user: User = Depends(get_current_active_user)):
     return [{"item_id": 1, "owner": current_user}]
+
+
+@app.post("/products/", response_model=Product)
+async def create_product(product: Product, current_user: User = Depends(get_current_active_user)):
+    product.id = len(products_db) + 1
+    products_db[product.id] = product
+    return product
+
+
+@app.get("/products/", response_model=list[Product])
+async def read_products():
+    return list(products_db.values())
+
+
+@app.get("/products/{product_id}", response_model=Product)
+async def read_product(product_id: int):
+    if product_id not in products_db:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return products_db[product_id]
+
+
+@app.put("/products/{product_id}", response_model=Product)
+async def update_product(product_id: int, product: Product, current_user: User = Depends(get_current_active_user)):
+    if product_id not in products_db:
+        raise HTTPException(status_code=404, detail="Product not found")
+    products_db[product_id] = product
+    return product
+
+
+@app.delete("/products/{product_id}")
+async def delete_product(product_id: int, current_user: User = Depends(get_current_active_user)):
+    if product_id not in products_db:
+        raise HTTPException(status_code=404, detail="Product not found")
+    del products_db[product_id]
+    return {"message": "Product deleted"}
+
+
+@app.post("/products/{product_id}/purchase", response_model=Purchase)
+async def purchase_product(product_id: int, current_user: User = Depends(get_current_active_user)):
+    if product_id not in products_db:
+        raise HTTPException(status_code=404, detail="Product not found")
+    purchase = Purchase(user_id=current_user.id, product_id=product_id)
+    purchases_db.append(purchase)
+    return purchase
+
+
+@app.get("/products/{product_id}/buyers", response_model=list[User])
+async def get_product_buyers(product_id: int, current_user: User = Depends(get_current_active_user)):
+    buyers = []
+    for purchase in purchases_db:
+        if purchase.product_id == product_id:
+            buyer = get_user(db, purchase.user_id)
+            if buyer:
+                buyers.append(buyer)
+    return buyers
+
+
+@app.delete("/purchases/{purchase_id}")
+async def delete_purchase(purchase_id: int, current_user: User = Depends(get_current_active_user)):
+    """Deletes a purchase by its ID, if the current user is authorized."""
+
+    purchase = purchases_db[purchase_id]
+
+    # Authorization check
+    if purchase is None or purchase["user_id"] != current_user.username:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this purchase")
+
+    result = purchase
+
+    # result = purchases_collection.delete_one({"id": purchase_id})
+    del purchases_db[purchase_id]
+    if purchase_id not in purchases_db:
+        return {"message": "Purchase deleted"}
+    else:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete purchase")
+
+@app.get("/admin/purchases/")
+async def get_purchases_with_buyers(current_user: User = Depends(get_current_active_user)):
+    """Retrieves all purchases with buyer information for the admin panel."""
+
+    # Authorization check (ensure the current user is an admin)
+    if not current_user.is_admin:  # Replace 'is_admin' with your actual admin check logic
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+
+    purchases_with_buyers = []
+
+    for purchase_id, purchase in purchases_db.items():
+        buyer_info = db.get(purchase["user_id"])  # Get buyer info from the user db
+        if buyer_info:
+            product_info = products_db.get(purchase["product_id"])
+            purchases_with_buyers.append({
+                "purchase_id": purchase_id,
+                "buyer": buyer_info,
+                "product": product_info,
+                "purchase_date": purchase["purchase_date"]
+            })
+
+    return purchases_with_buyers
