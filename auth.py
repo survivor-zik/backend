@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta
+from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from schemas.auth import TokenData
-from model.user import UserModel
-from crud.user import get_user_by_email
-from database import user_collection
+from pydantic import BaseModel
 from bson import ObjectId
+from database import user_collection
+from model.user import UserModel
+from schemas.auth import TokenData, Token
 
 SECRET_KEY = "your_secret_key"
 ALGORITHM = "HS256"
@@ -15,6 +16,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+async def get_user_by_email(email: str) -> Optional[UserModel]:
+    user_data = await user_collection.find_one({"email": email})
+    if user_data:
+        return UserModel(**user_data)
+    return None
 
 
 def verify_password(plain_password, hashed_password):
@@ -34,7 +42,7 @@ async def authenticate_user(email: str, password: str):
     return user
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -54,12 +62,25 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
-        if email is None:
+        role: str = payload.get("role")
+        if email is None or role is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
+        token_data = TokenData(email=email, role=role)
     except JWTError:
         raise credentials_exception
     user = await get_user_by_email(token_data.email)
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_current_active_user(current_user: UserModel = Depends(get_current_user)):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+async def get_current_active_admin_user(current_user: UserModel = Depends(get_current_active_user)):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=400, detail="The user doesn't have enough privileges")
+    return current_user

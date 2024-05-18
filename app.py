@@ -1,5 +1,8 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from typing import List
+
+from fastapi.security import OAuth2PasswordRequestForm
+
 from model.user import UserModel
 from fastapi.middleware.cors import CORSMiddleware
 from model.product import ProductModel
@@ -10,8 +13,9 @@ from schemas.purchase import PurchaseCreate
 from crud.user import get_user, get_users, create_user
 from crud.product import get_product, get_products, create_product, update_product, delete_product
 from crud.purchase import get_purchase, get_purchases, create_purchase, delete_purchase
-from auth import authenticate_user, create_access_token, get_current_user
+from auth import *
 from datetime import timedelta
+from schemas.auth import TokenResponse
 
 app = FastAPI()
 app.add_middleware(
@@ -23,38 +27,53 @@ app.add_middleware(
 )
 
 
-@app.post("/token", response_model=Token)
-async def login_for_access_token(form_data: UserSignIn):
-    user = await authenticate_user(form_data.email, form_data.password)
+@app.post("/token", response_model=TokenResponse)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = await authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=30)
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.role}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
 
 
-@app.post("/users/", response_model=UserModel)
-async def create_user_endpoint(user: UserCreate):
-    return await create_user(user)
+@app.post("/users", response_model=UserModel)
+async def create_user(user: UserCreate):
+    user_dict = user.dict()
+    user_dict["hashed_password"] = get_password_hash(user_dict.pop("password"))
+    new_user = await user_collection.insert_one(user_dict)
+    created_user = await user_collection.find_one({"_id": new_user.inserted_id})
+    return UserModel(**created_user)
+
+
+@app.post("/users", response_model=UserModel)
+async def create_user(user: UserCreate):
+    user_dict = user.dict()
+    user_dict["hashed_password"] = get_password_hash(user_dict.pop("password"))
+    new_user = await user_collection.insert_one(user_dict)
+    created_user = await user_collection.find_one({"_id": new_user.inserted_id})
+    return UserModel(**created_user)
+
+
+@app.get("/users/me", response_model=UserModel)
+async def read_users_me(current_user: UserModel = Depends(get_current_active_user)):
+    return current_user
+
+
+@app.get("/admin", response_model=UserModel)
+async def read_admin(current_user: UserModel = Depends(get_current_active_admin_user)):
+    return current_user
 
 
 @app.get("/users/", response_model=List[UserModel])
 async def get_users_endpoint():
     return await get_users()
-
-
-@app.get("/users/{user_id}", response_model=UserModel)
-async def get_user_endpoint(user_id: str):
-    user = await get_user(user_id)
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
 
 
 @app.post("/products/", response_model=ProductModel)
