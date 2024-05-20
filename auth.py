@@ -9,8 +9,11 @@ from bson import ObjectId
 from database import user_collection
 from model.user import UserModel
 from schemas.auth import TokenData, Token
+from dotenv import load_dotenv
+import os
 
-SECRET_KEY = "your_secret_key"
+load_dotenv()
+SECRET_KEY = os.getenv('SECRET_KEY')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

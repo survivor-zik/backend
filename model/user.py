@@ -9,3 +9,4 @@ class UserModel(BaseModel):
     hashed_password: str
     disabled: Optional[bool] = None
     role: str = "User"
+
