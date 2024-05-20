@@ -1,6 +1,7 @@
 import uuid
 
 from model.purchase import PurchaseModel
+from schemas.purchase import PurchaseCreate
 from fastapi import APIRouter, HTTPException, Depends, status
 from model.user import UserModel
 from auth import get_current_user, get_current_active_admin_user
@@ -12,21 +13,23 @@ purchase_router = APIRouter()
 
 
 @purchase_router.post("/", response_model=PurchaseModel)
-async def create_purchase(purchase: PurchaseModel, current_user: UserModel = Depends(get_current_user)):
-    purchase.user_id = current_user.email
-    purchase_dict = purchase.dict(by_alias=True)
-    purchase_dict["_id"] = purchase_dict.pop("id")
-    result = await purchase_collection.insert_one(purchase_dict)
-    if result.inserted_id:
-        purchase.id = result.inserted_id
-        return purchase
-    else:
+async def create_purchase(purchase: PurchaseCreate, current_user: UserModel = Depends(get_current_user)):
+    try:
+        purchase.user_id = current_user.email
+        purchase_dict = purchase.dict(by_alias=True)
+        purchase_dict["_id"] = str(uuid.uuid4())
+        print(purchase_dict)
+        result = await purchase_collection.insert_one(purchase_dict)
+        created_purchase = await purchase_collection.find_one({"_id": result.inserted_id})
+        return PurchaseModel(**created_purchase)
+
+    except:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create purchase")
 
 
 @purchase_router.get("/{purchase_id}", response_model=PurchaseModel)
 async def get_purchase(purchase_id: str, current_user: UserModel = Depends(get_current_user)):
-    purchase = await purchase_collection.find_one({"_id": uuid.UUID(purchase_id)})
+    purchase = await purchase_collection.find_one({"_id": purchase_id})
     if purchase:
         return PurchaseModel(**purchase)
     else:

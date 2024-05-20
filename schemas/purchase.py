@@ -1,9 +1,15 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+
+
+class PurchaseCreateItemModel(BaseModel):
+    product_id: str
+    quantity: int
 
 
 class PurchaseCreate(BaseModel):
-    user_id: str
-    product_id: str
-    quantity: int
+    items: List[PurchaseCreateItemModel]
     total_price: float
+    status: str = "pending"
+
+
