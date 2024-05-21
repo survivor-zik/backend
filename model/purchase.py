@@ -10,7 +10,7 @@ class PurchaseItemModel(BaseModel):
 
 
 class PurchaseModel(BaseModel):
-    id: str
+    id: str = Field(alias="_id")
     user_id: str
     items: List[PurchaseItemModel]
     total_price: float

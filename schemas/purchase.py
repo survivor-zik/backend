@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import List
 
 
 class PurchaseCreateItemModel(BaseModel):
@@ -11,5 +11,3 @@ class PurchaseCreate(BaseModel):
     items: List[PurchaseCreateItemModel]
     total_price: float
     status: str = "pending"
-
-
