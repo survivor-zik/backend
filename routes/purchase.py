@@ -1,6 +1,6 @@
 import uuid
 from model.purchase import PurchaseModel
-from schemas.purchase import PurchaseCreate
+from schemas.purchase import PurchaseCreate, PurchaseUpdate
 from fastapi import APIRouter, HTTPException, Depends, status
 from model.user import UserModel
 from auth import get_current_user, get_current_active_admin_user
@@ -84,3 +84,24 @@ async def delete_purchase(purchase_id: str, current_user: UserModel = Depends(ge
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase not found")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to delete purchase: {str(e)}")
+
+
+@purchase_router.patch("/{purchase_id}", response_model=PurchaseModel)
+async def partial_update_purchase(purchase_id: str, purchase_update: PurchaseUpdate,
+                                  current_user: UserModel = Depends(get_current_active_admin_user)):
+    try:
+        update_dict = purchase_update.dict(by_alias=True, exclude_unset=True)
+
+        if "items" in update_dict:
+            update_dict["items"] = [item.dict(exclude_unset=True) for item in update_dict["items"]]
+
+        result = await purchase_collection.update_one({"_id": purchase_id}, {"$set": update_dict})
+
+        if result.modified_count == 1:
+            updated_purchase = await purchase_collection.find_one({"_id": purchase_id})
+            return PurchaseModel(**updated_purchase)
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase not found or no changes made")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Failed to partially update purchase: {str(e)}")
