@@ -16,3 +16,5 @@ class PurchaseModel(BaseModel):
     total_price: float
     purchase_date: datetime = Field(default_factory=datetime.utcnow)
     status: str = "pending"
+    address: str
+    contact: str

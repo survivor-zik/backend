@@ -11,9 +11,9 @@ class ProductCreate(BaseModel):
 
 
 class ProductUpdate(BaseModel):
-    name: Optional[str]
-    price: Optional[float]
-    description: Optional[str]
-    colors: Optional[str]
-    image: Optional[str]
-    categories: Optional[str]
+    name: Optional[str] = None
+    price: Optional[float] = None
+    description: Optional[str] = None
+    colors: Optional[str] = None
+    image: Optional[str] = None
+    categories: Optional[str] = None

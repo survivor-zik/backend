@@ -11,9 +11,9 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    username: Optional[str]
-    full_name: Optional[str]
-    email: Optional[str]
-    password: Optional[str]
-    role: Optional[str]
-    disabled: Optional[bool]
+    username: str
+    full_name: Optional[str] = None
+    email: str
+    password: Optional[str] = None
+    role: Optional[str] = None
+    disabled: Optional[bool] = None
