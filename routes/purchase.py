@@ -101,13 +101,9 @@ async def partial_update_purchase(purchase_id: str, purchase_update: PurchaseUpd
         if result.modified_count == 1:
             updated_purchase = await purchase_collection.find_one({"_id": purchase_id})
             return PurchaseModel(**updated_purchase)
-
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update purchase")
-
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to update purchase: {str(e)}")
         else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase not found or no changes made")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update purchase")
+
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Failed to partially update purchase: {str(e)}")
