@@ -38,6 +38,7 @@ async def get_products_endpoint():
     except Exception as e:
         return JSONResponse(status_code=500, content={'message': str(e)})
 
+
 @product_router.put("/{product_id}", response_model=ProductModel)
 async def update_product_endpoint(
         product_id: str,

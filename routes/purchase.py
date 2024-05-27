@@ -52,9 +52,11 @@ async def get_purchase_all(current_user: UserModel = Depends(get_current_active_
 @purchase_router.get("/user", response_model=List[PurchaseModel])
 async def get_user_purchases(current_user: UserModel = Depends(get_current_user)):
     try:
+        print(current_user.email)
         user_purchases = await purchase_collection.find({"user_id": current_user.email}).to_list(length=None)
         return [PurchaseModel(**purchase) for purchase in user_purchases]
     except Exception as e:
+        print(e,"error")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to get user purchases: {str(e)}")
 
 
