@@ -88,19 +88,15 @@ async def delete_purchase(purchase_id: str, current_user: UserModel = Depends(ge
 
 
 @purchase_router.patch("/{purchase_id}", response_model=PurchaseModel)
-async def patch_purchase(purchase_id: str, purchase: PurchaseUpdate,
-                         current_user: UserModel = Depends(get_current_active_admin_user)):
+async def partial_update_purchase(purchase_id: str, purchase_update: PurchaseUpdate,
+                                  current_user: UserModel = Depends(get_current_active_admin_user)):
     try:
-        existing_purchase = await purchase_collection.find_one({"_id": purchase_id})
+        update_dict = purchase_update.dict(by_alias=True, exclude_unset=True)
 
-        if not existing_purchase:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase not found")
+        if "items" in update_dict:
+            update_dict["items"] = [item.dict(exclude_unset=True) for item in update_dict["items"]]
 
-        update_data = purchase.dict(exclude_unset=True)
-
-        updated_purchase = {**existing_purchase, **update_data}
-
-        result = await purchase_collection.replace_one({"_id": purchase_id}, updated_purchase)
+        result = await purchase_collection.update_one({"_id": purchase_id}, {"$set": update_dict})
 
         if result.modified_count == 1:
             updated_purchase = await purchase_collection.find_one({"_id": purchase_id})
@@ -110,3 +106,8 @@ async def patch_purchase(purchase_id: str, purchase: PurchaseUpdate,
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to update purchase: {str(e)}")
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase not found or no changes made")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Failed to partially update purchase: {str(e)}")
