@@ -1,12 +1,19 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from typing import List
 from schemas.product import ProductCreate, ProductUpdate
 from model.product import ProductModel
 from crud.product import create_product, get_product, get_products, update_product, delete_product
 from auth import get_current_active_admin_user
+from pathlib import Path
+import os
+from utils import generate_unique_id
+import base64
 
 product_router = APIRouter()
+
+IMAGES_PATH = Path("static")
+IMAGES_PATH.mkdir(parents=True, exist_ok=True)
 
 
 @product_router.post("/", response_model=ProductModel)
@@ -19,7 +26,8 @@ async def create_product_endpoint(
         image: UploadFile = File(...),
         current_user=Depends(get_current_active_admin_user)
 ):
-    product = ProductCreate(name=name, price=price, description=description, colors=colors, categories=categories)
+    product = ProductCreate(iden=generate_unique_id(), name=name, price=price, description=description, colors=colors,
+                            categories=categories)
     return await create_product(product, image)
 
 
@@ -63,3 +71,27 @@ async def delete_product_endpoint(product_id: str, current_user=Depends(get_curr
     if not success:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted successfully"}
+
+
+@product_router.get("/image/{product_id}")
+async def get_image(product_id: str):
+    if f"{product_id}.jpg" in os.listdir(IMAGES_PATH):
+        with open(os.path.join(IMAGES_PATH, f"{product_id}.jpg"), "rb") as f:
+            image_bytes = f.read()
+
+        return Response(content=image_bytes, media_type="image/jpeg")
+
+
+@product_router.get("/images/")
+async def get_images():
+    responses = []
+    for image_file in os.listdir(IMAGES_PATH):
+        image_path = os.path.join(IMAGES_PATH, image_file)
+        with open(image_path, "rb") as f:
+            image_bytes = f.read()
+            image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            responses.append({
+                "image_name": image_file,
+                "image_data": image_base64
+            })
+    return JSONResponse(content=responses)

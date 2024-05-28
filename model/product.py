@@ -4,10 +4,9 @@ import uuid
 
 
 class ProductModel(BaseModel):
-    id: str
+    iden: str
     name: str
     price: float
     description: str
     colors: str
     categories: str
-    image: str
