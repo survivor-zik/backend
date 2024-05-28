@@ -2,10 +2,13 @@ import uuid
 from model.purchase import PurchaseModel
 from schemas.purchase import PurchaseCreate, PurchaseUpdate
 from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.responses import JSONResponse
 from model.user import UserModel
 from auth import get_current_user, get_current_active_admin_user
 from database import purchase_collection
 from typing import List
+from utils import send_email
+from crud.product import get_product
 
 purchase_router = APIRouter()
 
@@ -13,11 +16,21 @@ purchase_router = APIRouter()
 @purchase_router.post("/", response_model=PurchaseModel)
 async def create_purchase(purchase: PurchaseCreate, current_user: UserModel = Depends(get_current_user)):
     try:
+        products = []
         purchase_dict = purchase.dict()
         purchase_dict["user_id"] = current_user.email
+        # print(current_user.email)
         purchase_dict["_id"] = str(uuid.uuid4())
         result = await purchase_collection.insert_one(purchase_dict)
         created_purchase = await purchase_collection.find_one({"_id": result.inserted_id})
+        for item in created_purchase['items']:
+            i = await get_product(item['product_id'])
+            products.append(i.name)
+            # print(i)
+        subject = "Purchase Confirmation"
+        body = "Thank you for your purchase! You have bought the following items:\n" + "\n".join(products)
+        send_email(subject, body, current_user.email)
+
         return PurchaseModel(**created_purchase)
 
     except Exception as e:
