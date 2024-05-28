@@ -1,9 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from fastapi.responses import JSONResponse, FileResponse, Response
 from typing import List
-from schemas.product import ProductCreate, ProductUpdate
+from schemas.product import ProductCreate, ProductUpdate, ProductPatch
 from model.product import ProductModel
-from crud.product import create_product, get_product, get_products, update_product, delete_product
+from crud.product import create_product, get_product, get_products, update_product, delete_product, patch_product
 from auth import get_current_active_admin_user
 from pathlib import Path
 import os
@@ -95,3 +95,21 @@ async def get_images():
                 "image_data": image_base64
             })
     return JSONResponse(content=responses)
+
+
+@product_router.patch("/{product_id}", response_model=ProductModel)
+async def patch_product_endpoint(
+        product_id: str,
+        name: str = None,
+        price: float = None,
+        description: str = None,
+        colors: str = None,
+        categories: str = None,
+        image: UploadFile = File(None),
+        current_user=Depends(get_current_active_admin_user)
+):
+    product_patch = ProductPatch(name=name, price=price, description=description, colors=colors, categories=categories)
+    patched_product = await patch_product(product_id, product_patch, image)
+    if not patched_product:
+        raise HTTPException(status_code=404, detail="Product not found or no changes made")
+    return patched_product

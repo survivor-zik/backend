@@ -69,7 +69,7 @@ async def get_user_purchases(current_user: UserModel = Depends(get_current_user)
         user_purchases = await purchase_collection.find({"user_id": current_user.email}).to_list(length=None)
         return [PurchaseModel(**purchase) for purchase in user_purchases]
     except Exception as e:
-        print(e,"error")
+        print(e, "error")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to get user purchases: {str(e)}")
 
 
@@ -123,3 +123,5 @@ async def patch_purchase(purchase_id: str, purchase: PurchaseUpdate,
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to update purchase: {str(e)}")
+
+

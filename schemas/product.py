@@ -18,3 +18,10 @@ class ProductUpdate(BaseModel):
     colors: Optional[str]
     categories: Optional[str]
 
+
+class ProductPatch(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    description: Optional[str] = None
+    colors: Optional[str] = None
+    categories: Optional[str] = None

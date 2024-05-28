@@ -1,8 +1,8 @@
 from bson import ObjectId
 from typing import List, Union
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 from model.product import ProductModel
-from schemas.product import ProductCreate, ProductUpdate
+from schemas.product import ProductCreate, ProductUpdate, ProductPatch
 from database import product_collection
 from utils import generate_unique_id
 import shutil
@@ -36,9 +36,9 @@ async def create_product(product: ProductCreate, image: UploadFile) -> ProductMo
         shutil.copyfileobj(image.file, file_object)
     return prod
 
+
 async def update_product(product_id: str, product: ProductUpdate, image: UploadFile = None) -> Union[
     ProductModel, None]:
-     
     product_dict = {k: v for k, v in product.dict().items() if v is not None}
     if image:
         with open(os.path.join(IMAGES_PATH, f"{product_id}.jpg"), "wb+") as file_object:
@@ -58,3 +58,20 @@ async def delete_product(product_id: str) -> bool:
     deleted_product = await product_collection.delete_one({"iden": product_id})
     os.remove(os.path.join(IMAGES_PATH, f"{product_id}.jpg"))
     return deleted_product.deleted_count == 1
+
+
+async def patch_product(product_id: str, product_patch: ProductPatch, image: UploadFile = None) -> Union[
+    ProductModel, None]:
+    patch_dict = {k: v for k, v in product_patch.dict().items() if v is not None}
+    if image:
+        image_data = await image.read()
+        image_path = IMAGES_PATH / f"{product_id}.jpg"
+        with open(image_path, "wb") as img_file:
+            img_file.write(image_data)
+
+    if len(patch_dict) >= 1:
+        updated_product = await product_collection.update_one({"id": product_id}, {"$set": patch_dict})
+        if updated_product.modified_count == 1:
+            updated_product = await product_collection.find_one({"id": product_id})
+            return ProductModel(**updated_product)
+    return None
