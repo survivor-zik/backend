@@ -11,8 +11,8 @@ class PurchaseCreate(BaseModel):
     items: List[PurchaseCreateItemModel]
     total_price: float
     status: str = "pending"
-    contact: str
     address: str
+    contact: str
 
 
 class PurchaseUpdateItemModel(BaseModel):
@@ -21,8 +21,8 @@ class PurchaseUpdateItemModel(BaseModel):
 
 
 class PurchaseUpdate(BaseModel):
-    items: List[PurchaseUpdateItemModel] = None
+    items: Optional[List[PurchaseUpdateItemModel]] = List[None]
     total_price: Optional[float] = None
     status: Optional[str] = None
-    contact: Optional[str] = None
     address: Optional[str] = None
+    contact: Optional[str] = None

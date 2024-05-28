@@ -17,3 +17,4 @@ class ProductUpdate(BaseModel):
     description: Optional[str]
     colors: Optional[str]
     categories: Optional[str]
+

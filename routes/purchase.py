@@ -32,7 +32,6 @@ async def create_purchase(purchase: PurchaseCreate, current_user: UserModel = De
         send_email(subject, body, current_user.email)
 
         return PurchaseModel(**created_purchase)
-
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to create purchase: {str(e)}")
 
@@ -66,9 +65,11 @@ async def get_purchase_all(current_user: UserModel = Depends(get_current_active_
 @purchase_router.get("/user", response_model=List[PurchaseModel])
 async def get_user_purchases(current_user: UserModel = Depends(get_current_user)):
     try:
+        print(current_user.email)
         user_purchases = await purchase_collection.find({"user_id": current_user.email}).to_list(length=None)
         return [PurchaseModel(**purchase) for purchase in user_purchases]
     except Exception as e:
+        print(e,"error")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to get user purchases: {str(e)}")
 
 
@@ -100,21 +101,25 @@ async def delete_purchase(purchase_id: str, current_user: UserModel = Depends(ge
 
 
 @purchase_router.patch("/{purchase_id}", response_model=PurchaseModel)
-async def partial_update_purchase(purchase_id: str, purchase_update: PurchaseUpdate,
-                                  current_user: UserModel = Depends(get_current_active_admin_user)):
+async def patch_purchase(purchase_id: str, purchase: PurchaseUpdate,
+                         current_user: UserModel = Depends(get_current_active_admin_user)):
     try:
-        update_dict = purchase_update.dict(by_alias=True, exclude_unset=True)
+        existing_purchase = await purchase_collection.find_one({"_id": purchase_id})
 
-        if "items" in update_dict:
-            update_dict["items"] = [item.dict(exclude_unset=True) for item in update_dict["items"]]
+        if not existing_purchase:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase not found")
 
-        result = await purchase_collection.update_one({"_id": purchase_id}, {"$set": update_dict})
+        update_data = purchase.dict(exclude_unset=True)
+
+        updated_purchase = {**existing_purchase, **update_data}
+
+        result = await purchase_collection.replace_one({"_id": purchase_id}, updated_purchase)
 
         if result.modified_count == 1:
             updated_purchase = await purchase_collection.find_one({"_id": purchase_id})
             return PurchaseModel(**updated_purchase)
-        else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase not found or no changes made")
+
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update purchase")
+
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"Failed to partially update purchase: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to update purchase: {str(e)}")

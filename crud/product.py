@@ -1,3 +1,4 @@
+from bson import ObjectId
 from typing import List, Union
 from fastapi import UploadFile
 from model.product import ProductModel
@@ -16,7 +17,7 @@ async def get_product(product_id: str) -> Union[ProductModel, None]:
     product = await product_collection.find_one({"iden": product_id})
     if product:
         return ProductModel(**product)
-    return None
+    raise HTTPException(status_code=404, detail="Product not found")
 
 
 async def get_products() -> List[ProductModel]:
@@ -35,24 +36,25 @@ async def create_product(product: ProductCreate, image: UploadFile) -> ProductMo
         shutil.copyfileobj(image.file, file_object)
     return prod
 
-
 async def update_product(product_id: str, product: ProductUpdate, image: UploadFile = None) -> Union[
     ProductModel, None]:
+     
     product_dict = {k: v for k, v in product.dict().items() if v is not None}
     if image:
         with open(os.path.join(IMAGES_PATH, f"{product_id}.jpg"), "wb+") as file_object:
             shutil.copyfileobj(image.file, file_object)
     if len(product_dict) >= 1:
         updated_product = await product_collection.update_one(
-            {"id": product_id}, {"$set": product_dict}
+            {"iden": product_id}, {"$set": product_dict}
         )
         if updated_product.modified_count == 1:
-            updated_product = await product_collection.find_one({"id": product_id})
+            updated_product = await product_collection.find_one({"iden": product_id})
+            updated_product['id'] = str(updated_product['_id'])
             return ProductModel(**updated_product)
     return None
 
 
 async def delete_product(product_id: str) -> bool:
     deleted_product = await product_collection.delete_one({"iden": product_id})
-    # os.remove(os.path.join(IMAGES_PATH, f"{product_id}.jpg"))
+    os.remove(os.path.join(IMAGES_PATH, f"{product_id}.jpg"))
     return deleted_product.deleted_count == 1
