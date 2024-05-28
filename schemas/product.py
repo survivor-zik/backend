@@ -3,6 +3,7 @@ from typing import Optional
 
 
 class ProductCreate(BaseModel):
+    iden: str
     name: str
     price: float
     description: str
@@ -15,5 +16,4 @@ class ProductUpdate(BaseModel):
     price: Optional[float]
     description: Optional[str]
     colors: Optional[str]
-    image: Optional[str]
     categories: Optional[str]
