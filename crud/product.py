@@ -40,7 +40,10 @@ async def create_product(product: ProductCreate, image: UploadFile) -> ProductMo
 async def update_product(product_id: str, product: ProductUpdate, image: UploadFile = None) -> Union[
     ProductModel, None]:
     product_dict = {k: v for k, v in product.dict().items() if v is not None}
+    
     if image:
+        if os.path.join(IMAGES_PATH, f"{product_id}.jpg").exists():
+            os.remove(os.path.join(IMAGES_PATH, f"{product_id}.jpg"))
         with open(os.path.join(IMAGES_PATH, f"{product_id}.jpg"), "wb+") as file_object:
             shutil.copyfileobj(image.file, file_object)
     if len(product_dict) >= 1:
@@ -64,6 +67,8 @@ async def patch_product(product_id: str, product_patch: ProductPatch, image: Upl
     ProductModel, None]:
     patch_dict = {k: v for k, v in product_patch.dict().items() if v is not None}
     if image:
+        if os.path.join(IMAGES_PATH, f"{product_id}.jpg").exists():
+            os.remove(os.path.join(IMAGES_PATH, f"{product_id}.jpg"))
         image_data = await image.read()
         image_path = IMAGES_PATH / f"{product_id}.jpg"
         with open(image_path, "wb") as img_file:
