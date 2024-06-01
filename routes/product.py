@@ -63,7 +63,7 @@ async def update_product_endpoint(
     updated_product = await update_product(product_id, product, image)
     if not updated_product:
         raise HTTPException(status_code=404, detail="Product not found or no changes made")
-    return JSONResponse(updated_product, status_code=200)
+    return updated_product
 
 
 @product_router.delete("/{product_id}", response_model=dict)
