@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
-from fastapi.responses import JSONResponse, FileResponse, Response
+from fastapi.responses import JSONResponse, Response
 from typing import List
 from schemas.product import ProductCreate, ProductUpdate, ProductPatch
 from model.product import ProductModel
@@ -9,6 +9,7 @@ from pathlib import Path
 import os
 from utils import generate_unique_id
 import base64
+from database import fs
 
 product_router = APIRouter()
 
@@ -47,7 +48,7 @@ async def get_products_endpoint():
         return JSONResponse(status_code=500, content={'message': str(e)})
 
 
-@product_router.put("/{product_id}", response_model=ProductModel)
+@product_router.put("/{product_id}")
 async def update_product_endpoint(
         product_id: str,
         name: str = None,
@@ -62,7 +63,7 @@ async def update_product_endpoint(
     updated_product = await update_product(product_id, product, image)
     if not updated_product:
         raise HTTPException(status_code=404, detail="Product not found or no changes made")
-    return updated_product
+    return JSONResponse(updated_product, status_code=200)
 
 
 @product_router.delete("/{product_id}", response_model=dict)
@@ -70,16 +71,23 @@ async def delete_product_endpoint(product_id: str, current_user=Depends(get_curr
     success = await delete_product(product_id)
     if not success:
         raise HTTPException(status_code=404, detail="Product not found")
-    return {"message": "Product deleted successfully"}
+    return {"message": f"Product deleted successfully {product_id}"}
 
 
 @product_router.get("/image/{product_id}")
 async def get_image(product_id: str):
-    if f"{product_id}.jpg" in os.listdir(IMAGES_PATH):
-        with open(os.path.join(IMAGES_PATH, f"{product_id}.jpg"), "rb") as f:
-            image_bytes = f.read()
+    product = await get_product(product_id)
+    if product:
+        if not fs.find({"filename": f"{product_id}.jpg"}, limit=1):
+            raise HTTPException(status_code=404, detail="Image not found")
+        image_file = await fs.open_download_stream_by_name(f"{product_id}.jpg")
+
+        image_bytes = await image_file.read()
 
         return Response(content=image_bytes, media_type="image/jpeg")
+
+    else:
+        raise HTTPException(status_code=404, detail="Image not found")
 
 
 @product_router.get("/images/")

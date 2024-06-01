@@ -8,3 +8,4 @@ python-multipart
 pymongo[srv]
 motor==3.4.0
 fastapi
+pillow
