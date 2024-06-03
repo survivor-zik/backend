@@ -7,6 +7,6 @@ class UserModel(BaseModel):
     full_name: Optional[str] = None
     email: str
     hashed_password: str
-    disabled: Optional[bool] = None
+    disabled: Optional[bool] = False
     role: str = "User"
 
