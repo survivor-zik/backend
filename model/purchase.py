@@ -14,7 +14,7 @@ class PurchaseModel(BaseModel):
     user_id: str
     items: List[PurchaseItemModel]
     total_price: float
-    purchase_date: datetime = Field(default_factory=datetime.utcnow)
+    purchase_date: str
     status: str = "pending"
     address: str
     contact: str

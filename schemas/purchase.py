@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
 
 
 class PurchaseCreateItemModel(BaseModel):
@@ -13,6 +14,7 @@ class PurchaseCreate(BaseModel):
     status: str = "pending"
     address: str
     contact: str
+    purchase_date: str = datetime.now()
 
 
 class PurchaseUpdateItemModel(BaseModel):
