@@ -14,7 +14,7 @@ class PurchaseModel(BaseModel):
     user_id: str
     items: List[PurchaseItemModel]
     total_price: float
-    purchase_date: str
+    purchase_date: datetime
     status: str = "pending"
     address: str
     contact: str

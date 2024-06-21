@@ -14,7 +14,7 @@ class PurchaseCreate(BaseModel):
     status: str = "pending"
     address: str
     contact: str
-    purchase_date: str = datetime.now()
+    purchase_date: datetime = datetime.now()  # Change to datetime
 
 
 class PurchaseUpdateItemModel(BaseModel):
@@ -23,7 +23,7 @@ class PurchaseUpdateItemModel(BaseModel):
 
 
 class PurchaseUpdate(BaseModel):
-    items: Optional[List[PurchaseUpdateItemModel]] = List[None]
+    items: Optional[List[PurchaseUpdateItemModel]] = None
     total_price: Optional[float] = None
     status: Optional[str] = None
     address: Optional[str] = None
