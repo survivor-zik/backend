@@ -19,16 +19,26 @@ async def create_purchase(purchase: PurchaseCreate, current_user: UserModel = De
         products = []
         purchase_dict = purchase.dict()
         purchase_dict["user_id"] = current_user.email
-        # print(current_user.email)
         purchase_dict["_id"] = str(uuid.uuid4())
         result = await purchase_collection.insert_one(purchase_dict)
         created_purchase = await purchase_collection.find_one({"_id": result.inserted_id})
+
         for item in created_purchase['items']:
             i = await get_product(item['product_id'])
-            products.append(i.name)
-            # print(i)
+            products.append(f"{i.name} (Price: ${i.price}, Description: {i.description})")
+
         subject = "Purchase Confirmation"
-        body = "Thank you for your purchase! You have bought the following items:\n" + "\n".join(products)
+        body = (
+                f"Dear {current_user.full_name},\n\n"
+                "Thank you for your recent purchase! We are delighted to confirm your order. Here are the details of the items you have bought:\n\n" +
+                "\n".join(products) +
+                "\n\nWe appreciate your business and hope you enjoy your purchase. If you have any questions or need further assistance, please do not hesitate to contact us.\n\n"
+                "Best regards,\n"
+                "Zee Nexers \n\n"
+                "Email: zeenerxers@gmail.com\n"
+                "Contact: +92-321-1001475"
+        )
+        print(body)
         send_email(subject, body, current_user.email)
 
         return PurchaseModel(**created_purchase)
@@ -123,5 +133,3 @@ async def patch_purchase(purchase_id: str, purchase: PurchaseUpdate,
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to update purchase: {str(e)}")
-
-
