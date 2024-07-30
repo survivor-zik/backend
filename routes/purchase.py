@@ -26,7 +26,7 @@ async def create_purchase(purchase: PurchaseCreate, current_user: UserModel = De
         for item in created_purchase['items']:
             i = await get_product(item['product_id'])
             products.append(f"{i.name} (Price: ${i.price}, Description: {i.description})")
-        print(created_purchase)
+
         subject = "Purchase Confirmation"
         body = (
                 f"Dear {current_user.full_name},\n\n"
@@ -39,7 +39,6 @@ async def create_purchase(purchase: PurchaseCreate, current_user: UserModel = De
                 "Email: zeenerxers@gmail.com\n"
                 "Contact: +92-321-1001475"
         )
-        print(body)
         send_email(subject, body, current_user.email)
 
         return PurchaseModel(**created_purchase)
