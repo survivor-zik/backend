@@ -26,13 +26,14 @@ async def create_purchase(purchase: PurchaseCreate, current_user: UserModel = De
         for item in created_purchase['items']:
             i = await get_product(item['product_id'])
             products.append(f"{i.name} (Price: ${i.price}, Description: {i.description})")
-
+        print(created_purchase)
         subject = "Purchase Confirmation"
         body = (
                 f"Dear {current_user.full_name},\n\n"
                 "Thank you for your recent purchase! We are delighted to confirm your order. Here are the details of the items you have bought:\n\n" +
                 "\n".join(products) +
                 "\n\nWe appreciate your business and hope you enjoy your purchase. If you have any questions or need further assistance, please do not hesitate to contact us.\n\n"
+                f"Total Price: ${created_purchase['total_price']}\n\n"
                 "Best regards,\n"
                 "Zee Nexers \n\n"
                 "Email: zeenerxers@gmail.com\n"
